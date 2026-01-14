@@ -1,0 +1,37 @@
+    # -----------------------------
+    # Install Docker
+    # -----------------------------
+    - name: Install Docker engine
+      dnf:
+        name: docker
+        state: present
+
+    - name: Enable and start Docker
+      systemd:
+        name: docker
+        enabled: yes
+        state: started
+
+    # -----------------------------
+    # Install Docker Compose v2.34
+    # -----------------------------
+    - name: Create Docker CLI plugin directory
+      file:
+        path: /usr/libexec/docker/cli-plugins
+        state: directory
+        mode: '0755'
+
+    - name: Download Docker Compose v2.34
+      get_url:
+        url: "https://github.com/docker/compose/releases/download/{{ docker_compose_version }}/docker-compose-linux-x86_64"
+        dest: /usr/libexec/docker/cli-plugins/docker-compose
+        mode: '0755'
+
+    - name: Verify Docker Compose installation
+      command: /usr/libexec/docker/cli-plugins/docker-compose --version
+      register: docker_compose_version_output
+      changed_when: false
+
+    - name: Output Docker Compose version
+      debug:
+        msg: "Docker Compose version: {{ docker_compose_version_output.stdout }}"

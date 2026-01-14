@@ -1,0 +1,103 @@
+---
+- name: Install Jenkins on Ubuntu 22.04
+  hosts: jenkins_server
+  become: yes
+
+  vars:
+    jenkins_version: "2.516.3" # e.g., "2.440.3" - Leave empty to install the latest version
+    java_package_name: "openjdk-17-jre"
+    jenkins_http_port: 8080
+    jenkins_gpg_key_url: "https://pkg.jenkins.io/debian-stable/jenkins.io-2023.key"
+    jenkins_keyring_path: "/usr/share/keyrings/jenkins-keyring.asc"
+
+  tasks:
+    # -----------------------------
+    # Create jenkins user
+    # -----------------------------
+    - name: Create jenkins group
+      group:
+        name: jenkins
+        state: present
+
+    - name: Create jenkins user
+      user:
+        name: jenkins
+        group: jenkins
+        shell: /bin/bash
+        system: yes
+        state: present
+
+    # -----------------------------
+    # Update apt cache
+    # -----------------------------
+    - name: Update apt package cache
+      apt:
+        update_cache: yes
+      changed_when: false
+
+    # -----------------------------
+    # Install Java 17 (Required for Jenkins)
+    # -----------------------------
+    - name: Install Java 17
+      apt:
+        name: "{{ java_package_name }}"
+        state: present
+
+    # -----------------------------
+    # Add Jenkins Repo and GPG Key
+    # -----------------------------
+    - name: Download Jenkins GPG key
+      get_url:
+        url: "{{ jenkins_gpg_key_url }}"
+        dest: "{{ jenkins_keyring_path }}"
+        mode: '0644'
+
+    - name: Add Jenkins repository to sources.list
+      apt_repository:
+        repo: "deb [signed-by={{ jenkins_keyring_path }}] https://pkg.jenkins.io/debian-stable binary/"
+        state: present
+
+    # -----------------------------
+    # Install Jenkins
+    # -----------------------------
+    - name: Install Jenkins
+      apt:
+        name: "{{ 'jenkins=' + jenkins_version if jenkins_version else 'jenkins' }}"
+        state: present
+        update_cache: yes
+      notify: Restart Jenkins
+
+    # -----------------------------
+    # Start Jenkins
+    # -----------------------------
+    - name: Enable and start Jenkins
+      systemd:
+        name: jenkins
+        enabled: yes
+        state: started
+
+    - name: Wait for Jenkins to start up and create password file
+      wait_for:
+        path: /var/lib/jenkins/secrets/initialAdminPassword
+        state: present
+        timeout: 120
+      when: initial_admin_password is not defined or not initial_admin_password.stat.exists
+
+    # -----------------------------
+    # Retrieve Initial Admin Password
+    # -----------------------------
+    - name: Get initial admin password
+      slurp:
+        src: /var/lib/jenkins/secrets/initialAdminPassword
+      register: initial_admin_password
+      changed_when: false
+
+    - name: Display initial admin password
+      debug:
+        msg: "Your initial Jenkins admin password is: {{ initial_admin_password.content | b64decode }}"
+
+  handlers:
+    - name: Restart Jenkins
+      systemd:
+        name: jenkins
+        state: restarted
