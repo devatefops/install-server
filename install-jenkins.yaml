@@ -64,7 +64,7 @@
       apt:
         name: "{{ 'jenkins=' + jenkins_version if jenkins_version else 'jenkins' }}"
         state: present
-        update_cache: yes
+        update_cache: yes # Run apt-get update before the install
       notify: Restart Jenkins
 
     # -----------------------------
