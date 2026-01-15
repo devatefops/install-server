@@ -37,12 +37,6 @@
         repo: "deb [arch=amd64 signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu {{ ansible_lsb.codename }} stable"
         state: present
 
-    - name: Enable and start Docker
-      systemd:
-        name: docker
-        enabled: yes
-        state: started
-
     - name: Install Docker Engine and Compose Plugin
       apt:
         name:
@@ -52,6 +46,13 @@
           - docker-buildx-plugin
           - docker-compose-plugin
         state: present
+        update_cache: yes
+
+    - name: Enable and start Docker service
+      systemd:
+        name: docker
+        enabled: yes
+        state: started
 
     # -----------------------------
     # Docker post-installation
