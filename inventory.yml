@@ -1,6 +1,8 @@
 all:
-  hosts:
-    jenkins-server:
-      ansible_host: 16.16.210.238
-      ansible_user: jenkins
-      ansible_ssh_private_key_file: ~/.ssh/
+  children:
+    jenkins_group:
+      hosts:
+        jenkins-server:
+          ansible_host: 16.16.210.238   # EC2 public IP
+          ansible_user: jenkins        # change if your AMI is Ubuntu
+          ansible_ssh_private_key_file: ~/.ssh/ec2-key.pem
